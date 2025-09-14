@@ -3,7 +3,7 @@ from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from models import db, User, Post, Like, Comment, Follow, Message
-from forms import SignupForm, LoginForm, PostForm, EditProfileForm, MessageForm
+from forms import SignupForm, LoginForm, PostForm, EditProfileForm
 from sqlalchemy import or_
 from dotenv import load_dotenv
 
@@ -50,7 +50,7 @@ def signup():
             email=form.email.data,
             bio=form.bio.data,
             skills=form.skills.data,
-            avatar_url=form.avatar_url.data
+            avatar_url=form.avatar_url.data or 'https://via.placeholder.com/150'
         )
         user.set_password(form.password.data)
         db.session.add(user)
@@ -98,7 +98,7 @@ def edit_profile():
         current_user.name = form.name.data
         current_user.bio = form.bio.data
         current_user.skills = form.skills.data
-        current_user.avatar_url = form.avatar_url.data
+        current_user.avatar_url = form.avatar_url.data or 'https://via.placeholder.com/150'
         db.session.commit()
         flash('Profile updated successfully!', 'success')
         return redirect(url_for('profile', user_id=current_user.id))
@@ -128,12 +128,12 @@ def like_post(post_id):
     if like:
         db.session.delete(like)
         db.session.commit()
-        return jsonify({'liked': False, 'likes_count': post.likes.count()})
+        return jsonify({'liked': False, 'likes_count': len(post.likes)})
     else:
         like = Like(user_id=current_user.id, post_id=post_id)
         db.session.add(like)
         db.session.commit()
-        return jsonify({'liked': True, 'likes_count': post.likes.count()})
+        return jsonify({'liked': True, 'likes_count': len(post.likes)})
 
 @app.route('/comment_post/<int:post_id>', methods=['POST'])
 @login_required
@@ -168,28 +168,22 @@ def follow(user_id):
     if follow:
         db.session.delete(follow)
         db.session.commit()
-        return jsonify({'followed': False, 'followers_count': user.followers.count()})
+        return jsonify({'followed': False, 'followers_count': len(user.followers)})
     else:
         follow = Follow(follower_id=current_user.id, followed_id=user_id)
         db.session.add(follow)
         db.session.commit()
-        return jsonify({'followed': True, 'followers_count': user.followers.count()})
+        return jsonify({'followed': True, 'followers_count': len(user.followers)})
 
 @app.route('/messages')
 @login_required
 def messages():
-    contacts = db.session.query(User).join(
-        Message, or_(
-            Message.sender_id == User.id,
-            Message.recipient_id == User.id
-        )
-    ).filter(
-        or_(
-            Message.sender_id == current_user.id,
-            Message.recipient_id == current_user.id
-        ),
-        User.id != current_user.id
-    ).distinct().all()
+    # Get all users that the current user has messaged or received messages from
+    sent_to = db.session.query(Message.recipient_id).filter(Message.sender_id == current_user.id).distinct()
+    received_from = db.session.query(Message.sender_id).filter(Message.recipient_id == current_user.id).distinct()
+    user_ids = set([id for (id,) in sent_to] + [id for (id,) in received_from])
+    
+    contacts = User.query.filter(User.id.in_(user_ids)).all()
     return render_template('messages.html', contacts=contacts)
 
 @app.route('/messages/<int:user_id>')
@@ -202,6 +196,7 @@ def conversation(user_id):
             (Message.sender_id == user_id) & (Message.recipient_id == current_user.id)
         )
     ).order_by(Message.created_at.asc()).all()
+    
     # Mark messages as read
     unread_messages = Message.query.filter_by(
         sender_id=user_id, recipient_id=current_user.id, read=False
@@ -209,12 +204,14 @@ def conversation(user_id):
     for msg in unread_messages:
         msg.read = True
     db.session.commit()
+    
     return jsonify({
         'messages': [{
             'id': msg.id,
             'sender_id': msg.sender_id,
             'content': msg.content,
-            'created_at': msg.created_at.strftime('%Y-%m-%d %H:%M')
+            'created_at': msg.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+            'is_sent': msg.sender_id == current_user.id
         } for msg in messages]
     })
 
@@ -236,7 +233,8 @@ def send_message(recipient_id):
             'id': message.id,
             'sender_id': message.sender_id,
             'content': message.content,
-            'created_at': message.created_at.strftime('%Y-%m-%d %H:%M')
+            'created_at': message.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+            'is_sent': True
         }
     })
 
@@ -257,5 +255,12 @@ def search():
     
     return render_template('search.html', users=users, posts=posts, query=query)
 
+@app.context_processor
+def inject_unread_count():
+    if current_user.is_authenticated:
+        unread_count = Message.query.filter_by(recipient_id=current_user.id, read=False).count()
+        return dict(unread_count=unread_count)
+    return dict(unread_count=0)
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=os.environ.get('FLASK_DEBUG', False))
