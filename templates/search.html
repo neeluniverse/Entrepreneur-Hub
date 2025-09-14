@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <h2>Search</h2>
+        <form method="GET" class="mb-4">
+            <div class="input-group">
+                <input type="text" name="q" class="form-control" placeholder="Search users or posts..." value="{{ query }}">
+                <button class="btn btn-primary" type="submit">Search</button>
+            </div>
+        </form>
+        
+        {% if query %}
+            <h3>Users</h3>
+            {% for user in users %}
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <img src="{{ user.avatar_url or 'https://via.placeholder.com/50' }}" class="rounded-circle me-3" width="50" height="50">
+                            <div>
+                                <h5 class="card-title"><a href="{{ url_for('profile', user_id=user.id) }}">{{ user.name }}</a></h5>
+                                {% if user.skills %}<p class="card-text">{{ user.skills }}</p>{% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% else %}
+                <p>No users found</p>
+            {% endfor %}
+            
+            <h3>Posts</h3>
+            {% for post in posts %}
+                {% include 'post.html' %}
+            {% else %}
+                <p>No posts found</p>
+            {% endfor %}
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
