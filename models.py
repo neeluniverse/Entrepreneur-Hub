@@ -16,14 +16,14 @@ class User(UserMixin, db.Model):
     avatar_url = db.Column(db.String(200))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
-    posts = db.relationship('Post', backref='author', lazy=True)
-    likes = db.relationship('Like', backref='user', lazy=True)
-    comments = db.relationship('Comment', backref='user', lazy=True)
-    sent_messages = db.relationship('Message', foreign_keys='Message.sender_id', backref='sender', lazy=True)
-    received_messages = db.relationship('Message', foreign_keys='Message.recipient_id', backref='recipient', lazy=True)
+    posts = db.relationship('Post', backref='author', lazy=True, cascade='all, delete-orphan')
+    likes = db.relationship('Like', backref='user', lazy=True, cascade='all, delete-orphan')
+    comments = db.relationship('Comment', backref='user', lazy=True, cascade='all, delete-orphan')
+    sent_messages = db.relationship('Message', foreign_keys='Message.sender_id', backref='sender', lazy=True, cascade='all, delete-orphan')
+    received_messages = db.relationship('Message', foreign_keys='Message.recipient_id', backref='recipient', lazy=True, cascade='all, delete-orphan')
     
-    followers = db.relationship('Follow', foreign_keys='Follow.followed_id', backref='followed', lazy=True)
-    following = db.relationship('Follow', foreign_keys='Follow.follower_id', backref='follower', lazy=True)
+    followers = db.relationship('Follow', foreign_keys='Follow.followed_id', backref='followed', lazy=True, cascade='all, delete-orphan')
+    following = db.relationship('Follow', foreign_keys='Follow.follower_id', backref='follower', lazy=True, cascade='all, delete-orphan')
     
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -37,6 +37,8 @@ class Follow(db.Model):
     follower_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     followed_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    __table_args__ = (db.UniqueConstraint('follower_id', 'followed_id', name='unique_follow'),)
 
 class Post(db.Model):
     __tablename__ = 'posts'
@@ -46,8 +48,8 @@ class Post(db.Model):
     image_url = db.Column(db.String(200))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
-    likes = db.relationship('Like', backref='post', lazy=True)
-    comments = db.relationship('Comment', backref='post', lazy=True)
+    likes = db.relationship('Like', backref='post', lazy=True, cascade='all, delete-orphan')
+    comments = db.relationship('Comment', backref='post', lazy=True, cascade='all, delete-orphan')
 
 class Like(db.Model):
     __tablename__ = 'likes'
@@ -55,6 +57,8 @@ class Like(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     post_id = db.Column(db.Integer, db.ForeignKey('posts.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    __table_args__ = (db.UniqueConstraint('user_id', 'post_id', name='unique_like'),)
 
 class Comment(db.Model):
     __tablename__ = 'comments'
