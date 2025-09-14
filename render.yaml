@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: entrepreneur-hub
+    env: python
+    plan: free
+    pythonVersion: "3.10.12"
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn app:app"
+    envVars:
+      - key: DATABASE_URL
+        fromService:
+          type: postgresql
+          name: divineconnectionstreasure
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
