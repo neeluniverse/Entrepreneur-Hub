@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "entrepreneur-hub"
+version = "0.1.0"
+description = "A social networking app for entrepreneurs"
+authors = ["Your Name <your.email@example.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+flask = "^2.3.3"
+flask-login = "^0.6.2"
+flask-wtf = "^1.1.1"
+flask-sqlalchemy = "^3.0.5"
+psycopg2-binary = "^2.9.7"
+gunicorn = "^21.2.0"
+python-dotenv = "^1.0.0"
+werkzeug = "^2.3.7"
+
+[tool.poetry.group.dev.dependencies]
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
