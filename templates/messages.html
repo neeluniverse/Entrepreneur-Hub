@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-4">
+        <h3>Conversations</h3>
+        <div class="list-group">
+            {% for contact in contacts %}
+                <a href="#" class="list-group-item list-group-item-action contact-item" data-user-id="{{ contact.id }}">
+                    <div class="d-flex align-items-center">
+                        <img src="{{ contact.avatar_url or 'https://via.placeholder.com/40' }}" class="rounded-circle me-2" width="40" height="40">
+                        <div>
+                            <h6 class="mb-0">{{ contact.name }}</h6>
+                            <small class="text-muted">Last message...</small>
+                        </div>
+                    </div>
+                </a>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <div class="col-md-8">
+        <div id="conversation" class="d-none">
+            <div class="card">
+                <div class="card-header" id="conversation-header">
+                    Conversation with <span id="recipient-name"></span>
+                </div>
+                <div class="card-body" style="height: 400px; overflow-y: auto;" id="messages-container">
+                    <div id="messages"></div>
+                </div>
+                <div class="card-footer">
+                    <textarea class="form-control" rows="2" placeholder="Type your message..." id="message-input"></textarea>
+                    <button class="btn btn-primary mt-2" id="send-message-btn">Send</button>
+                </div>
+            </div>
+        </div>
+        <div id="no-conversation" class="text-center mt-5">
+            <p>Select a conversation to start messaging</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='messages.js') }}"></script>
+{% endblock %}
